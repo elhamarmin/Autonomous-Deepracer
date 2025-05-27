@@ -40,7 +40,7 @@ A reinforcement learning framework for robotic navigation in Webots using PPO (S
 
 ## Workflow
 
-![Workflow Diagram](attachment://workflow_diagram.png)
+![Workflow Diagram](attachment://WorkFlow.png)
 
 1. **Sensors** (LiDAR & Camera) feed raw data →  
 2. **Pre-processing Nodes**  
