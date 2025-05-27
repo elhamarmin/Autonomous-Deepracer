@@ -20,7 +20,7 @@ A reinforcement learning framework for robotic navigation in Webots using PPO (S
 - **Configurable**  
   Manual hyperparameters or fully automated W&B sweeps.
 - **Real-World Adaptability**  
-  Seamless transfer to AWS DeepRacer’s camera, IMU, and motor interface.
+  Seamless transfer to AWS DeepRacer's camera, IMU, and motor interface.
 
 ---
 
@@ -62,7 +62,6 @@ A reinforcement learning framework for robotic navigation in Webots using PPO (S
 2. **Install dependencies**  
    ```bash
    pip install -r requirements.txt
-   pip install webots stable-baselines3 gymnasium wandb torch opencv-python matplotlib numpy
    ```
 3. **Install Webots**  
    - Download from https://cyberbotics.com/  
@@ -77,11 +76,102 @@ A reinforcement learning framework for robotic navigation in Webots using PPO (S
 
 ## Usage
 
-### Manual Training (PPO)
-```python
-from your_script import manual_train_model
+The project provides a simple interface through the `rl_gym.py` script in the `WebotsController` folder. Users only need to modify the `run_model` variable to switch between different modes:
 
-manual_train_model(
+### Running the Project
+
+Navigate to the `WebotsController` folder and modify the `run_model` variable in `rl_gym.py`:
+
+```python
+run_model = 0  # 0 = Train, 1 = Test, 2 = Debug
+```
+
+Then run:
+```bash
+cd WebotsController
+python rl_gym.py
+```
+
+### Run Modes
+
+#### Mode 0: Training
+```python
+run_model = 0  # Training mode
+```
+- Automatically starts training using Weights & Biases sweeps
+- Uses PPO algorithm with hyperparameter optimization
+- Models are saved to `./trained_model/model_<timestamp>.zip`
+- For manual training, uncomment and modify the `manual_train_model` call
+
+#### Mode 1: Testing
+```python
+run_model = 1  # Testing mode
+```
+- Loads a pre-trained model and runs inference
+- Update the `model_path` variable to point to your trained model:
+  ```python
+  model_path = './trained_model/model_20240723-1425.zip'
+  ```
+- Displays real-time forward and steering values
+
+#### Mode 2: Debug/Manual Control
+```python
+run_model = 2  # Debug mode
+```
+- Allows manual control of the robot using keyboard inputs:
+  - `w`: Move forward
+  - `s`: Move backward  
+  - `a`: Turn left
+  - `d`: Turn right
+  - `i`: Step simulation
+- Displays LiDAR sensor data for debugging
+
+### Custom OpenAI Gym Environment
+
+The project includes a custom OpenAI Gym environment (`WebotsGymEnv`) that wraps the Webots simulation:
+
+- **Environment Class**: `WebotsGymEnv` in `WebotsGymEnv.py`
+- **Base Environment**: `WebotsEnvironment` in `WebotsEnvironment.py`
+- **Action Space**: Continuous 2D space `[-1,1]` for [forward/backward, left/right]
+- **Observation Space**: Camera-based lane detection weights and line counts
+
+#### Customizing the Environment
+
+Users can modify the environment to meet their specific needs:
+
+1. **Reward Function**: Modify `get_reward()` in `WebotsEnvironment.py`
+2. **Observation Space**: Adjust `get_observations()` for different sensor inputs
+3. **Action Space**: Change action dimensions in `WebotsGymEnv.py`
+4. **Environment Parameters**: 
+   - `destination_coordinate`: Goal position (default: `[-3.13, 0]`)
+   - `reach_threshold`: Distance threshold for goal (default: `0.1`)
+   - `safe_distance`: Obstacle avoidance distance (default: `0.35`)
+   - `max_speed`: Maximum robot speed (default: `20`)
+
+#### Example Environment Usage
+```python
+from WebotsGymEnv import WebotsGymEnv
+
+env = WebotsGymEnv()
+obs = env.reset()
+
+for step in range(1000):
+    action = env.action_space.sample()  # Random action
+    obs, reward, done, truncated, info = env.step(action)
+    if done or truncated:
+        obs = env.reset()
+```
+
+### Alternative Training Methods
+
+For advanced users who want more control over the training process:
+
+#### Manual PPO Training
+```python
+from MacRacerTraining import MacRacerTraining
+
+macRacerTr = MacRacerTraining(train=True)
+macRacerTr.manual_train_model(
     learning_rate=3e-4,
     total_timesteps=30_000,
     ent_coef=0.15,
@@ -92,25 +182,15 @@ manual_train_model(
     batch_size=64,
 )
 ```
-Model saved to `./trained_model/model_<timestamp>.zip`.
 
-### Automated Sweeps (Weights & Biases)
-```python
-from your_script import train_model, sweep_configuration
-import wandb
-
-sweep_id = wandb.sweep(sweep_configuration, project="sb3")
-wandb.agent(sweep_id, function=train_model, count=30)
-```
-
-### REINFORCE Training
+#### REINFORCE Training
 ```python
 from your_script import Agent_REINFORCE, Policy_Network, WebotsGymEnv
 import torch
 
-env    = WebotsGymEnv()
+env = WebotsGymEnv()
 policy = Policy_Network(3, 6, 3).to(device)
-agent  = Agent_REINFORCE(
+agent = Agent_REINFORCE(
     policy_network=policy,
     environment=env,
     save_path='./results',
@@ -124,19 +204,15 @@ agent  = Agent_REINFORCE(
 )
 agent.train()
 ```
-Plots saved under `./results/reward_plot.png`.
 
-### Testing & Debugging
-- **Test**:  
-  ```python
-  agent.test()
-  ```
-- **Debug** (manual control): set `run_model = 2` and use `w/s/a/d/i` to move.
+### Monitoring and Visualization
 
-- **TensorBoard**:  
+- **TensorBoard**: View training logs
   ```bash
   tensorboard --logdir logs/train
   ```
+- **Weights & Biases**: Automatic experiment tracking and hyperparameter sweeps
+- **Real-time Output**: Forward and steering values displayed during testing
 
 ---
 
@@ -149,7 +225,7 @@ Pipeline steps:
 2. **Color Filter**  
    Yellow range in BGR → grayscale.
 3. **Perspective Warp**  
-   Bird’s-eye via `perspective_transform`.
+   Bird's-eye via `perspective_transform`.
 4. **Edge & Line Detection**  
    Canny & HoughLinesP.
 5. **Weight Computation**  
@@ -164,7 +240,7 @@ Outputs all intermediate images and weights for debugging.
 ## Real-World Deployment (AWS DeepRacer)
 
 1. **Hardware**  
-   - Match DeepRacer’s camera (1080×720).  
+   - Match DeepRacer's camera (1080×720).  
    - Map LiDAR to IMU or external LiDAR.
 2. **Software**  
    ```bash

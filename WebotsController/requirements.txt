@@ -1,0 +1,9 @@
+gymnasium==1.1.1
+matplotlib==3.10.3
+networkx==3.2.1
+numpy==2.2.6
+opencv_python==4.11.0.86
+opencv_python_headless==4.10.0.84
+stable_baselines3==2.6.0
+torch==2.5.0+cu124
+wandb==0.19.11
